@@ -1,0 +1,4 @@
+
+# Ignore all application.properties and application.yml files in all submodules
+**/application.properties
+**/application.yml
