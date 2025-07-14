@@ -3,10 +3,13 @@ package com.thirdparty.user.request.controller;
 import com.thirdparty.user.request.dto.*;
 import com.thirdparty.user.request.domain.Request;
 import com.thirdparty.user.request.service.RequestService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/requests")
@@ -30,7 +33,13 @@ public class RequestController {
     @PostMapping("/{id}/consent")
     @PreAuthorize("hasRole('ROLE_USER')")
     public ResponseEntity<Request> handleConsent(@PathVariable String id, @RequestBody ConsentActionDto dto, @RequestHeader("X-User-Id") String userId) {
-        return ResponseEntity.ok(requestService.handleConsent(id, dto, userId));
+        return ResponseEntity.ok(requestService.handleConsentFull(id, dto, userId));
+    }
+
+    @PostMapping("/{id}/fields/consent")
+    @PreAuthorize("hasRole('ROLE_USER')")
+    public ResponseEntity<Request> handleConsentByField(@PathVariable String id, @RequestBody List<ConsentActionFieldDto> dto, @RequestHeader("X-User-Id") String userId) {
+        return ResponseEntity.ok(requestService.handleConsentField(id, dto, userId));
     }
 
     @PostMapping("/{id}/documents")
@@ -39,7 +48,13 @@ public class RequestController {
         return ResponseEntity.ok(requestService.attachDocument(id, dto, userId));
     }
 
-    @PostMapping("/{id}/submit")
+    @PostMapping("/{id}/submitForm")
+    @PreAuthorize("hasRole('ROLE_INITIATOR')")
+    public ResponseEntity<Boolean> submitForm(@PathVariable String id, @RequestBody SubmitForm dto, @RequestHeader("X-User-Id") String userId) {
+        return ResponseEntity.ok(requestService.submitForm(id, dto, userId));
+    }
+
+    @PostMapping("/{id}/submitToBlockChain")
     @PreAuthorize("hasRole('ROLE_INITIATOR')")
     public ResponseEntity<Request> submitToBlockchain(@PathVariable String id, @RequestBody BlockchainSubmitDto dto, @RequestHeader("X-User-Id") String userId) {
         return ResponseEntity.ok(requestService.submitToBlockchain(id, dto, userId));

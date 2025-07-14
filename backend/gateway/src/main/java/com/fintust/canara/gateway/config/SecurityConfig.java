@@ -12,17 +12,34 @@ import org.springframework.security.web.server.SecurityWebFilterChain;
 @EnableWebFluxSecurity
 @EnableReactiveMethodSecurity
 public class SecurityConfig {
+
     @Bean
     public SecurityWebFilterChain springSecurityFilterChain(ServerHttpSecurity http) {
         http
-            .csrf(csrf -> csrf.disable())
+            .csrf(ServerHttpSecurity.CsrfSpec::disable)
+            .cors(ServerHttpSecurity.CorsSpec::disable) // Disable built-in CORS as we have our own filter
             .authorizeExchange(exchanges -> exchanges
-                .pathMatchers("/actuator/health", "/actuator/info").permitAll()
+                // Public endpoints
+                .pathMatchers(
+                    "/actuator/**",
+                    "/api/auth/**",
+                    "/api/digilocker/public/**"
+                ).permitAll()
+                
+                // Allow OPTIONS requests for CORS preflight
                 .pathMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                
+                // Authenticated endpoints
+                .pathMatchers("/api/user/**").authenticated()
+                .pathMatchers("/api/digilocker/**").authenticated()
+                .pathMatchers("/api/requests/**").authenticated()
+                
+                // All other requests
                 .anyExchange().authenticated()
-            );
-            // Remove default JWT resource server config to avoid missing ReactiveJwtDecoder error
-            // .oauth2ResourceServer(oauth2 -> oauth2.jwt());
+            )
+            .httpBasic(ServerHttpSecurity.HttpBasicSpec::disable)
+            .formLogin(ServerHttpSecurity.FormLoginSpec::disable);
+        
         return http.build();
     }
 }

@@ -20,7 +20,8 @@ public class Request {
     private Map<String, Object> dynamicFields;
     private String requestedBy;
     private String role;
-    private List<Consent> consents;
+    private List<Consent> fullConsent;
+    private Map<String,Consent> consents;
     private List<DocumentMeta> documents;
     private String blockchainTxId;
     private String status;

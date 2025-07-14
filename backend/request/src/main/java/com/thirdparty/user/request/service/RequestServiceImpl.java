@@ -3,16 +3,20 @@ package com.thirdparty.user.request.service;
 import com.thirdparty.user.request.domain.*;
 import com.thirdparty.user.request.dto.*;
 import com.thirdparty.user.request.repository.RequestRepository;
+import com.thirdparty.user.request.repository.SubmitFormRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.Instant;
+import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
 public class RequestServiceImpl implements RequestService {
     private final RequestRepository requestRepository;
+    private final SubmitFormRepository submitFormRepository;
 
     @Override
     public Request initiateRequest(RequestInitiateDto dto, String userId) {
@@ -53,7 +57,7 @@ public class RequestServiceImpl implements RequestService {
 
     @Override
     @Transactional
-    public Request handleConsent(String requestId, ConsentActionDto dto, String userId) {
+    public Request handleConsentFull(String requestId, ConsentActionDto dto, String userId) {
 
         if(dto.getAction() == null || dto.getAction().isEmpty()) {
             throw new IllegalArgumentException("Consent action cannot be empty");
@@ -66,9 +70,9 @@ public class RequestServiceImpl implements RequestService {
                 .userId(userId)
                 .action(dto.getAction())
                 .reason(dto.getReason())
-                .timestamp(Instant.now())
+                .timestamp(Instant.now()) //Add per consent field
                 .build();
-        request.getConsents().add(consent);
+        request.getFullConsent().add(consent);
         request.setUpdatedAt(Instant.now());
         return requestRepository.save(request);
     }
@@ -105,5 +109,54 @@ public class RequestServiceImpl implements RequestService {
         return requestRepository.findById(requestId)
                 .map(Request::getStatus)
                 .orElse("NOT_FOUND");
+    }
+
+    @Override
+    public Request handleConsentField(String requestId, List<ConsentActionFieldDto> dto, String userId) {
+
+        dto.forEach((singleConsent)-> {
+            if(singleConsent.getAction() == null || singleConsent.getAction().isEmpty()) {
+                throw new IllegalArgumentException("Consent action cannot be empty");
+            }
+            if(!singleConsent.getAction().matches("approve|reject|delete")) {
+                throw new IllegalArgumentException("Invalid consent action: " + singleConsent.getAction());
+            }
+        });
+
+        Request request = requestRepository.findById(requestId).orElseThrow();
+        dto.forEach((singleConsent)->{
+            Consent consent = Consent.builder()
+                    .userId(userId)
+                    .action(singleConsent.getAction())
+                    .reason(singleConsent.getReason())
+                    .timestamp(Instant.now()) //Add per consent field
+                    .build();
+            request.getConsents().put(singleConsent.getField(),consent);
+        });
+
+        request.setUpdatedAt(Instant.now());
+        return requestRepository.save(request);
+    }
+
+    @Override
+    @Transactional
+    public Boolean submitForm(String id, SubmitForm dto, String userId) {
+        Request request = requestRepository.findById(id).orElseThrow(() -> new IllegalArgumentException("Request not found"));
+        request.getFullConsent().forEach((each) -> {
+            if (!Objects.equals(each.getAction(), "APPROVE") && !Objects.equals(each.getAction(), "DELETE") && !Objects.equals(each.getAction(), "REJECT")) {
+                throw new IllegalArgumentException("Form can't be submit, Consent action cannot be empty");
+            }
+        });
+        SubmitFrom submit = SubmitFrom.builder()
+                .requestId(id)
+                .fieldEntries(dto.getFieldEntries())
+                .documentEntries(dto.getDocumentEntries())
+                .createdAt(Instant.now())
+                .updatedAt(Instant.now())
+                .build();
+        submitFormRepository.save(submit);
+        request.setStatus("SUBMITTED");
+        requestRepository.save(request);
+        return Boolean.TRUE;
     }
 }
