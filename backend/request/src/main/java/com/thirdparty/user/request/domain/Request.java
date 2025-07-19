@@ -16,10 +16,11 @@ public class Request {
     @Id
     private String id;
     private String title;
+    private String name;
     private String description;
     private Map<String, Object> dynamicFields;
     private String requestedBy;
-    private String role;
+    private List<String> role;
     private List<Consent> fullConsent;
     private Map<String,Consent> consents;
     private List<DocumentMeta> documents;

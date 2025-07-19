@@ -1,5 +1,6 @@
 package com.thirdparty.user.request.config;
 
+import com.thirdparty.user.request.filter.JwtAuthFilter;
 import com.thirdparty.user.request.util.JwtUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
@@ -9,6 +10,7 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -25,23 +27,23 @@ import java.util.List;
 @RequiredArgsConstructor
 public class SecurityConfig {
     private final JwtUtil jwtUtil;
+    private final JwtAuthFilter jwtAuthFilter;
     // Add your JWT filter bean here
-
+//csrf.ignoringRequestMatchers("/api/requests/**").
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-            .csrf(csrf -> csrf.ignoringRequestMatchers("/api/requests/**").disable())
+            .csrf(AbstractHttpConfigurer::disable)
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(HttpMethod.POST, "/api/requests").hasRole("INITIATOR")
-                .requestMatchers(HttpMethod.POST, "/api/requests/*/submit").hasRole("INITIATOR")
+                .requestMatchers(HttpMethod.POST, "/api/requests/*/submit").hasRole("USER")
                 .requestMatchers(HttpMethod.POST, "/api/requests/*/consent").hasRole("USER")
                 .requestMatchers(HttpMethod.POST, "/api/requests/*/documents").hasRole("USER")
                 .anyRequest().authenticated()
             )
-            // .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
-            ;
+             .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
         return http.build();
     }
 

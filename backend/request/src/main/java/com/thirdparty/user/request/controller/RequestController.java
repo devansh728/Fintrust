@@ -7,9 +7,12 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/requests")
@@ -19,8 +22,12 @@ public class RequestController {
 
     @PostMapping
     @PreAuthorize("hasRole('ROLE_INITIATOR')")
-    public ResponseEntity<Request> initiateRequest(@RequestBody RequestInitiateDto dto, @RequestHeader("X-User-Id") String userId) {
-        return ResponseEntity.ok(requestService.initiateRequest(dto, userId));
+    public ResponseEntity<Request> initiateRequest(@RequestBody RequestInitiateDto dto) {
+        String userId = SecurityContextHolder.getContext().getAuthentication().getName();
+        List<String> roles = SecurityContextHolder.getContext().getAuthentication().getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority) // Returns "ROLE_USER"
+                .toList();
+        return ResponseEntity.ok(requestService.initiateRequest(dto, userId, roles));
     }
 
     @GetMapping("/{id}")
@@ -32,25 +39,29 @@ public class RequestController {
 
     @PostMapping("/{id}/consent")
     @PreAuthorize("hasRole('ROLE_USER')")
-    public ResponseEntity<Request> handleConsent(@PathVariable String id, @RequestBody ConsentActionDto dto, @RequestHeader("X-User-Id") String userId) {
+    public ResponseEntity<Request> handleConsent(@PathVariable String id, @RequestBody ConsentActionDto dto) {
+        String userId = SecurityContextHolder.getContext().getAuthentication().getName();
         return ResponseEntity.ok(requestService.handleConsentFull(id, dto, userId));
     }
 
     @PostMapping("/{id}/fields/consent")
     @PreAuthorize("hasRole('ROLE_USER')")
-    public ResponseEntity<Request> handleConsentByField(@PathVariable String id, @RequestBody List<ConsentActionFieldDto> dto, @RequestHeader("X-User-Id") String userId) {
+    public ResponseEntity<Request> handleConsentByField(@PathVariable String id, @RequestBody List<ConsentActionFieldDto> dto) {
+        String userId = SecurityContextHolder.getContext().getAuthentication().getName();
         return ResponseEntity.ok(requestService.handleConsentField(id, dto, userId));
     }
 
     @PostMapping("/{id}/documents")
     @PreAuthorize("hasRole('ROLE_USER')")
-    public ResponseEntity<Request> attachDocument(@PathVariable String id, @RequestBody AttachDocumentDto dto, @RequestHeader("X-User-Id") String userId) {
+    public ResponseEntity<Request> attachDocument(@PathVariable String id, @RequestBody AttachDocumentDto dto) {
+        String userId = SecurityContextHolder.getContext().getAuthentication().getName();
         return ResponseEntity.ok(requestService.attachDocument(id, dto, userId));
     }
 
     @PostMapping("/{id}/submitForm")
     @PreAuthorize("hasRole('ROLE_INITIATOR')")
-    public ResponseEntity<Boolean> submitForm(@PathVariable String id, @RequestBody SubmitForm dto, @RequestHeader("X-User-Id") String userId) {
+    public ResponseEntity<Boolean> submitForm(@PathVariable String id, @RequestBody SubmitForm dto) {
+        String userId = SecurityContextHolder.getContext().getAuthentication().getName();
         return ResponseEntity.ok(requestService.submitForm(id, dto, userId));
     }
 

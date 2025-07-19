@@ -16,13 +16,14 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.List;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
 public class DocumentService {
     private final HmacService hmacService;
     private final RestTemplate digiLockerRestTemplate;
-    private TokenService tokenService;
+    private final DigiLockerOAuth2Service digiLockerOAuth2Service;
 
     public DocumentListResponse getSelfUploadedDocuments(String accessToken, String folderId) {
         String url = folderId != null ?
@@ -41,12 +42,14 @@ public class DocumentService {
         return response.getBody();
     }
 
-    public DocumentListResponse getIssuedDocuments(String userId) throws Exception {
-
-        String accessToken = tokenService.getAccessToken(userId).orElseThrow(()-> new RuntimeException("no access token issued"));
+    public DocumentListResponse getIssuedDocuments(String username) throws Exception {
+        Optional<String> accessToken = digiLockerOAuth2Service.getAccessToken(username);
+        if (accessToken.isEmpty()) {
+            throw new RuntimeException("No valid DigiLocker access token found for user: " + username);
+        }
 
         HttpHeaders headers = new HttpHeaders();
-        headers.setBearerAuth(accessToken);
+        headers.setBearerAuth(accessToken.get());
 
         ResponseEntity<DocumentListResponse> response = digiLockerRestTemplate.exchange(
                 "/public/oauth2/2/files/issued",
@@ -57,12 +60,14 @@ public class DocumentService {
         return response.getBody();
     }
 
-    public DocumentDownloadResponse downloadDocument(String userId, String uri) throws Exception {
-
-        String accessToken = tokenService.getAccessToken(userId).orElseThrow(()-> new RuntimeException("no access token issued"));
+    public DocumentDownloadResponse downloadDocument(String username, String uri) throws Exception {
+        Optional<String> accessToken = digiLockerOAuth2Service.getAccessToken(username);
+        if (accessToken.isEmpty()) {
+            throw new RuntimeException("No valid DigiLocker access token found for user: " + username);
+        }
 
         HttpHeaders headers = new HttpHeaders();
-        headers.setBearerAuth(accessToken);
+        headers.setBearerAuth(accessToken.get());
 
         ResponseEntity<byte[]> response = digiLockerRestTemplate.exchange(
                 "/public/oauth2/1/file/" + uri,
@@ -83,5 +88,11 @@ public class DocumentService {
                 response.getHeaders().getContentType(),
                 uri
         );
+    }
+
+    public static class DocumentIntegrityException extends RuntimeException {
+        public DocumentIntegrityException(String message) {
+            super(message);
+        }
     }
 }

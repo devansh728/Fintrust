@@ -7,7 +7,7 @@ import java.util.List;
 import java.util.Optional;
 
 public interface RequestService {
-    Request initiateRequest(RequestInitiateDto dto, String userId);
+    Request initiateRequest(RequestInitiateDto dto, String userId, List<String> roles);
     Optional<Request> getRequestById(String id);
     Request handleConsentFull(String requestId, ConsentActionDto dto, String userId);
     Request attachDocument(String requestId, AttachDocumentDto dto, String userId);
