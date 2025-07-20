@@ -1,12 +1,17 @@
 package com.thirdparty.user.request.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.thirdparty.user.request.FlaskApiClient;
 import com.thirdparty.user.request.domain.*;
 import com.thirdparty.user.request.dto.*;
 import com.thirdparty.user.request.repository.RequestRepository;
 import com.thirdparty.user.request.repository.SubmitFormRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.client.RestTemplate;
+
 import java.time.Instant;
 import java.util.List;
 import java.util.Objects;
@@ -14,9 +19,11 @@ import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class RequestServiceImpl implements RequestService {
     private final RequestRepository requestRepository;
     private final SubmitFormRepository submitFormRepository;
+    private final AsyncBlockchainService asyncBlockchainService;
 
     @Override
     public Request initiateRequest(RequestInitiateDto dto, String userId, List<String> roles) {
@@ -33,7 +40,7 @@ public class RequestServiceImpl implements RequestService {
         }
 
         boolean isInitiator = roles.stream()
-                .anyMatch(role -> role.equals("ROLE_INITIATOR") || role.equals("INITIATOR"));
+                .anyMatch(role -> role.equals("ROLE_USER") || role.equals("USER"));
 
         if (!isInitiator) {
             throw new IllegalArgumentException("Only users with INITIATOR role can initiate requests");
@@ -103,7 +110,7 @@ public class RequestServiceImpl implements RequestService {
 
     @Override
     @Transactional
-    public Request submitToBlockchain(String requestId, BlockchainSubmitDto dto, String userId) {
+    public Request submitToBlockchain(String requestId, String userId) {
         Request request = requestRepository.findById(requestId).orElseThrow();
         // Blockchain integration logic here (call Feign/Web3j client)
         request.setBlockchainTxId("dummy-txid");
@@ -166,6 +173,59 @@ public class RequestServiceImpl implements RequestService {
         submitFormRepository.save(submit);
         request.setStatus("SUBMITTED");
         requestRepository.save(request);
+
+        UserConsentDto formConsent = UserConsentDto.builder()
+                .approvedFields(request.getConsents().keySet().stream().toList())
+                .consentTime(Instant.now())
+                .consentType("Granular")
+                .build();
+
+        RequestInitiateDto1 dtoO = RequestInitiateDto1.builder()
+                .requestedBy(request.getRequestedBy())
+                .description(request.getDescription())
+                .dynamicFields(request.getDynamicFields().keySet().stream().toList())
+                .name(request.getName())
+                .title(request.getTitle())
+                .build();
+
+        formData data = formData.builder()
+                .textFields(submit.getFieldEntries())
+                .fileUploads(submit.getDocumentEntries())
+                .build();
+
+        ConsentPayload payload = ConsentPayload.builder()
+                .formData(data)
+                .userConsent(formConsent)
+                .thirdParty(dtoO)
+                .useCase(request.getTitle())
+                .build();
+
+        try {
+            FlaskApiClient apiClient = new FlaskApiClient(
+                    new RestTemplate(),
+                    new ObjectMapper(),
+                    "http://localhost:5000"
+            );
+
+            String minimizedJson = apiClient.submitToFlaskApi(id, payload);
+
+            asyncBlockchainService.submitToBlockchainAsync(id, minimizedJson)
+                    .thenAccept(result -> {
+                        // This will be executed when the async call completes successfully
+                        log.info("Successfully submitted to blockchain");
+                    })
+                    .exceptionally(ex -> {
+                        log.error("Failed to submit to blockchain", ex);
+                        return null;
+                    });
+
+        } catch (Exception e) {
+            throw new RuntimeException("Error communicating with Flask API", e);
+        }
+
+
+
+
         return Boolean.TRUE;
     }
 }

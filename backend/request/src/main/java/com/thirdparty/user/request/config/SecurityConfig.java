@@ -1,6 +1,6 @@
 package com.thirdparty.user.request.config;
 
-import com.thirdparty.user.request.filter.JwtAuthFilter;
+import com.thirdparty.user.request.filter.AnomalyDetectionFilter;
 import com.thirdparty.user.request.util.JwtUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
@@ -27,7 +27,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class SecurityConfig {
     private final JwtUtil jwtUtil;
-    private final JwtAuthFilter jwtAuthFilter;
+    private final AnomalyDetectionFilter jwtAuthFilter;
     // Add your JWT filter bean here
 //csrf.ignoringRequestMatchers("/api/requests/**").
     @Bean
@@ -37,7 +37,7 @@ public class SecurityConfig {
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers(HttpMethod.POST, "/api/requests").hasRole("INITIATOR")
+                .requestMatchers(HttpMethod.POST, "/api/requests").hasRole("USER")
                 .requestMatchers(HttpMethod.POST, "/api/requests/*/submit").hasRole("USER")
                 .requestMatchers(HttpMethod.POST, "/api/requests/*/consent").hasRole("USER")
                 .requestMatchers(HttpMethod.POST, "/api/requests/*/documents").hasRole("USER")

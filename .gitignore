@@ -1,4 +1,71 @@
+# Node.js
+node_modules/
+npm-debug.log
+yarn-debug.log
+yarn-error.log
 
-# Ignore all application.properties and application.yml files in all submodules
-**/application.properties
-**/application.yml
+# Java (Maven)
+*.class
+*.jar
+*.war
+*.ear
+*.iml
+*.log
+*.tmp
+*.swp
+*.swo
+*.bak
+*.orig
+*.rej
+*.DS_Store
+*.idea/
+*.project
+*.classpath
+*.settings/
+target/
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.env
+*.venv
+env/
+venv/
+ENV/
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# VSCode
+.vscode/
+
+# IntelliJ
+.idea/
+*.iml
+
+# Mac
+.DS_Store
+
+# Windows
+*.exe
+*.dll
+*.bat
+*.cmd
+
+# Logs
+*.log
+
+# Coverage
+coverage/
+*.cover
+*.coverage
+
+# Misc
+*.swp
+*.swo
+
+# Uploads (if you want to ignore uploaded files, uncomment below)
+# canara bank hackathon/backend/uploads/

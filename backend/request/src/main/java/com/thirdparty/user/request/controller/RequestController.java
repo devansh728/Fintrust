@@ -21,7 +21,7 @@ public class RequestController {
     private final RequestService requestService;
 
     @PostMapping
-    @PreAuthorize("hasRole('ROLE_INITIATOR')")
+    @PreAuthorize("hasRole('ROLE_USER')")
     public ResponseEntity<Request> initiateRequest(@RequestBody RequestInitiateDto dto) {
         String userId = SecurityContextHolder.getContext().getAuthentication().getName();
         List<String> roles = SecurityContextHolder.getContext().getAuthentication().getAuthorities().stream()
@@ -59,16 +59,17 @@ public class RequestController {
     }
 
     @PostMapping("/{id}/submitForm")
-    @PreAuthorize("hasRole('ROLE_INITIATOR')")
+    @PreAuthorize("hasRole('ROLE_USER')")
     public ResponseEntity<Boolean> submitForm(@PathVariable String id, @RequestBody SubmitForm dto) {
         String userId = SecurityContextHolder.getContext().getAuthentication().getName();
         return ResponseEntity.ok(requestService.submitForm(id, dto, userId));
     }
 
     @PostMapping("/{id}/submitToBlockChain")
-    @PreAuthorize("hasRole('ROLE_INITIATOR')")
-    public ResponseEntity<Request> submitToBlockchain(@PathVariable String id, @RequestBody BlockchainSubmitDto dto, @RequestHeader("X-User-Id") String userId) {
-        return ResponseEntity.ok(requestService.submitToBlockchain(id, dto, userId));
+    @PreAuthorize("hasRole('ROLE_USER')")
+    public ResponseEntity<Request> submitToBlockchain(@PathVariable String id) {
+        String userId = SecurityContextHolder.getContext().getAuthentication().getName();
+        return ResponseEntity.ok(requestService.submitToBlockchain(id, userId));
     }
 
     @GetMapping("/{id}/status")

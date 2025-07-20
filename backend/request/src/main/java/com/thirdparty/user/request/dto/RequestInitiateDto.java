@@ -1,9 +1,11 @@
 package com.thirdparty.user.request.dto;
 
+import lombok.Builder;
 import lombok.Data;
 import java.util.Map;
 
 @Data
+@Builder
 public class RequestInitiateDto {
     private String title;
     private String name;
