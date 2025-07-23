@@ -1,0 +1,21 @@
+{
+  "network": "localhost",
+  "chainId": "1337",
+  "deployer": "0x6FEA87B2B06204da691d388163E15E56392DB9A8",
+  "contracts": {
+    "PrivacyFramework": "0x84b6d19B9e11162571886a471Af0A94986b45e8c",
+    "DataTokenization": "0xeEa66fe1615Ce4C1afcA726348F0fE938c6269e7",
+    "ComplianceManager": "0x8845Fe476805ebA5730BbfD3D304c5715f80ebeF"
+  },
+  "deploymentTime": "2025-07-06T09:27:41.563Z",
+  "thirdParties": [
+    "loan_provider_001",
+    "insurance_company_002",
+    "credit_bureau_003"
+  ],
+  "retentionPolicies": {
+    "personal_data": "1 year",
+    "financial_data": "7 years",
+    "transaction_data": "5 years"
+  }
+}

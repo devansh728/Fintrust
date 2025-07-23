@@ -1,0 +1,112 @@
+# Operating System Files
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Build Artifacts
+*.log
+*.tmp
+*.bak
+*.swp
+*.swo
+*.obj
+*.o
+*.exe
+*.dll
+*.so
+*.dylib
+*.a
+*.lib
+*.bin
+*.out
+*.d
+*.pyc
+__pycache__/
+*.class
+target/ # Maven/Gradle build output
+build/  # Common build output directory
+
+# Dependency Directories
+node_modules/
+vendor/ # For PHP Composer, Ruby Gems, etc.
+venv/   # Python virtual environments
+.env/   # Python virtual environments (another common name)
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# IDE and Editor Files
+.idea/             # IntelliJ IDEA
+.vscode/           # VS Code
+.sublime-workspace # Sublime Text
+*.sublime-project
+*.sublime-workspace
+.project           # Eclipse
+.classpath
+.settings/
+.c9/               # Cloud9
+*.iml              # IntelliJ IDEA module files
+*.ipr              # IntelliJ IDEA project files
+*.iws              # IntelliJ IDEA workspace files
+*.komodoproject    # Komodo IDE
+
+# Environment Variables
+.env                # Common for storing environment variables
+.env.*.local
+.flaskenv
+
+# Database Files
+*.sqlite
+*.db
+*.sql
+*.dump
+
+# Temporary Files
+*~
+#*#
+.#*
+*.bak
+*.swp
+*.tmp
+
+# Test/Coverage Reports
+coverage/
+.nyc_output/
+*.lcov
+
+# Package Manager Specific Files
+# npm
+package-lock.json # If you're using npm < 5, you might want to commit this
+yarn.lock         # If you're using yarn, you might want to commit this
+pnpm-lock.yaml    # If you're using pnpm, you might want to commit this
+
+# macOS specific
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Windows specific
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Linux specific
+*.swp
+*.swo
+
+# Docker
+Dockerfile.bak
+docker-compose.yml.bak
+.dockerignore
+
+# Uploads and User-Generated Content (if applicable)
+/uploads/
+/media/
+
+# Configuration files that should not be committed
+# (e.g., sensitive API keys, database credentials)
+# config.local.js
+# credentials.json
+# secrets.yaml

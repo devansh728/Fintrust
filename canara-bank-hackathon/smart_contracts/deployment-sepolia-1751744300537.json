@@ -1,0 +1,21 @@
+{
+  "network": "sepolia",
+  "chainId": "11155111",
+  "deployer": "0xE79a4a1be34019245a077620d6Fd9E7fB944E759",
+  "contracts": {
+    "PrivacyFramework": "0x00E52E54CA33671dB2833C6F40023bcF8088C09B",
+    "DataTokenization": "0xf231ae4012fBb64D4C1c1D3440ff8D259B2502B3",
+    "ComplianceManager": "0x1880A80E2DCF9cc554dBBA88D596AaFAe64969e8"
+  },
+  "deploymentTime": "2025-07-05T19:38:20.537Z",
+  "thirdParties": [
+    "loan_provider_001",
+    "insurance_company_002",
+    "credit_bureau_003"
+  ],
+  "retentionPolicies": {
+    "personal_data": "1 year",
+    "financial_data": "7 years",
+    "transaction_data": "5 years"
+  }
+}
