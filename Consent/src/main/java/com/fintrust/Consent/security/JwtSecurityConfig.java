@@ -27,7 +27,10 @@ public class JwtSecurityConfig {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
-                .anyRequest().authenticated()
+                    .requestMatchers("/api/tpp/register").hasRole("TPP")
+                    .requestMatchers("/api/admin/**").hasRole("BANK_ADMIN")
+                    .requestMatchers("/thirdparty/**").hasAnyRole("USER", "TPP", "BANK_ADMIN")
+                    .anyRequest().authenticated()
             );
         http.addFilterBefore(jwtTokenFilter, UsernamePasswordAuthenticationFilter.class);
         return http.build();

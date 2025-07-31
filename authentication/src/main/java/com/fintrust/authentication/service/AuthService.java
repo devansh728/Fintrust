@@ -7,7 +7,7 @@ public interface AuthService {
     User register(RegisterRequest request);
     AuthResponse login(LoginRequest request);
     AuthResponse refreshToken(RefreshRequest request);
-    AuthResponse logout(LogoutRequest request);
-    Boolean validateToken(String token);
+    void logout(LogoutRequest request);
+    TokenValidationResult validateToken(String token);
 }
     

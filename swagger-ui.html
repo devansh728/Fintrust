@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FinTrust API Documentation</title>
+    <link rel="stylesheet" type="text/css" href="https://unpkg.com/swagger-ui-dist@5.9.0/swagger-ui.css" />
+    <style>
+        html {
+            box-sizing: border-box;
+            overflow: -moz-scrollbars-vertical;
+            overflow-y: scroll;
+        }
+        *, *:before, *:after {
+            box-sizing: inherit;
+        }
+        body {
+            margin:0;
+            background: #fafafa;
+        }
+        .swagger-ui .topbar {
+            background-color: #1e3a8a;
+        }
+        .swagger-ui .topbar .download-url-wrapper .select-label {
+            color: #ffffff;
+        }
+        .swagger-ui .info .title {
+            color: #1e3a8a;
+        }
+        .swagger-ui .scheme-container {
+            background-color: #ffffff;
+            box-shadow: 0 1px 2px 0 rgba(0,0,0,.15);
+        }
+    </style>
+</head>
+<body>
+    <div id="swagger-ui"></div>
+    <script src="https://unpkg.com/swagger-ui-dist@5.9.0/swagger-ui-bundle.js"></script>
+    <script src="https://unpkg.com/swagger-ui-dist@5.9.0/swagger-ui-standalone-preset.js"></script>
+    <script>
+        window.onload = function() {
+            // Swagger UI configuration
+            const ui = SwaggerUIBundle({
+                url: './swagger-config.yaml',
+                dom_id: '#swagger-ui',
+                deepLinking: true,
+                presets: [
+                    SwaggerUIBundle.presets.apis,
+                    SwaggerUIStandalonePreset
+                ],
+                plugins: [
+                    SwaggerUIBundle.plugins.DownloadUrl
+                ],
+                layout: "StandaloneLayout",
+                validatorUrl: null,
+                docExpansion: "list",
+                filter: true,
+                showRequestHeaders: true,
+                showCommonExtensions: true,
+                tryItOutEnabled: true,
+                requestInterceptor: function(request) {
+                    // Add CORS headers for local development
+                    request.headers['Access-Control-Allow-Origin'] = '*';
+                    request.headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS';
+                    request.headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization';
+                    return request;
+                },
+                responseInterceptor: function(response) {
+                    return response;
+                }
+            });
+
+            // Custom CSS for better styling
+            const style = document.createElement('style');
+            style.textContent = `
+                .swagger-ui .opblock.opblock-post {
+                    border-color: #49cc90;
+                    background: rgba(73, 204, 144, .1);
+                }
+                .swagger-ui .opblock.opblock-get {
+                    border-color: #61affe;
+                    background: rgba(97, 175, 254, .1);
+                }
+                .swagger-ui .opblock.opblock-put {
+                    border-color: #fca130;
+                    background: rgba(252, 161, 48, .1);
+                }
+                .swagger-ui .opblock.opblock-delete {
+                    border-color: #f93e3e;
+                    background: rgba(249, 62, 62, .1);
+                }
+                .swagger-ui .btn.execute {
+                    background-color: #4990e2;
+                    border-color: #4990e2;
+                }
+                .swagger-ui .btn.execute:hover {
+                    background-color: #357abd;
+                    border-color: #357abd;
+                }
+                .swagger-ui .info .title {
+                    font-size: 36px;
+                    font-weight: 600;
+                }
+                .swagger-ui .info .description {
+                    font-size: 14px;
+                    line-height: 1.6;
+                }
+                .swagger-ui .scheme-container {
+                    margin: 0 0 20px;
+                    padding: 20px;
+                    border-radius: 4px;
+                }
+                .swagger-ui .servers-title {
+                    font-weight: 600;
+                    margin-bottom: 10px;
+                }
+                .swagger-ui .servers select {
+                    margin-right: 10px;
+                }
+            `;
+            document.head.appendChild(style);
+        };
+    </script>
+</body>
+</html> 

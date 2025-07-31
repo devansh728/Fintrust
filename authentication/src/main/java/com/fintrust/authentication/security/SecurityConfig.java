@@ -29,7 +29,7 @@ import java.util.Arrays;
 public class SecurityConfig {
     private final JwtAuthFilter jwtAuthFilter;
     private final CustomOAuth2AuthenticationSuccessHandler oAuth2SuccessHandler;
-    private final UserService userService; // Inject your UserDetailsService implementation
+    private final UserService userService;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -38,7 +38,11 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/auth/**", "/oauth2/**", "/login/**", "/oauth2/loginSuccess").permitAll() // Added /oauth2/loginSuccess
+                        .requestMatchers(
+                                "/api/auth/**",
+                                "/login/oauth2/code/google", // Only allow the Google callback
+                                "/error"
+                        ).permitAll()
                         .anyRequest().authenticated()
                 )
                 .oauth2Login(oauth2 -> oauth2
@@ -55,11 +59,11 @@ public class SecurityConfig {
     }
 
     @Bean
-    public AuthenticationProvider authenticationProvider() { // Add this bean definition
-        DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider();
-        authProvider.setUserDetailsService(userService);
-        authProvider.setPasswordEncoder(passwordEncoder());
-        return authProvider;
+    public AuthenticationProvider authenticationProvider() {
+        return new DaoAuthenticationProvider() {{
+            setUserDetailsService(userService);
+            setPasswordEncoder(passwordEncoder());
+        }};
     }
 
     @Bean

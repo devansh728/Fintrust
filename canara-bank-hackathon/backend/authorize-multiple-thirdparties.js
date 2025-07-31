@@ -19,7 +19,15 @@ if (!privateKey) {
 const wallet = new ethers.Wallet(privateKey, provider);
 const contract = new ethers.Contract(address, abi, wallet);
 
-const thirdParties = ["bank_001", "XYZ NBFC", "fintech_001", "demo_001", "canara_bank"];
+const thirdParties = [
+  "bank_001",
+  "XYZ NBFC",
+  "fintech_001",
+  "demo_001",
+  "canara_bank",
+  "Devansh",
+  "FinTech Solutions Ltd"
+];
 
 async function main() {
   for (const id of thirdParties) {

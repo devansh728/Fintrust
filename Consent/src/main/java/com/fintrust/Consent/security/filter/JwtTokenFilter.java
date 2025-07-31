@@ -7,11 +7,13 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
+import java.util.Collection;
 import java.util.Collections;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,6 +34,11 @@ public class JwtTokenFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
+
+        logger.info("Raw URL: {}", request.getRequestURL().toString());
+        logger.info("Query String: {}", request.getQueryString());
+        logger.info("Full URI: {}", request.getRequestURI());
+
         String authHeader = request.getHeader("Authorization");
         String token = null;
         logger.info("JwtTokenFilter: Incoming request URI: {}", request.getRequestURI());
@@ -46,6 +53,8 @@ public class JwtTokenFilter extends OncePerRequestFilter {
             try {
                 if (jwtUtil.validateToken(token)) {
                     String userId = jwtUtil.extractUserId(token);
+                    Collection<? extends GrantedAuthority> authorities = jwtUtil.extractAuthorities(token);
+                    logger.info("Raw authorities from token: {}", authorities);
                     logger.info("JwtTokenFilter: Token valid, extracted userId: {}", userId);
                     // --- Behavioral Anomaly Detection Integration ---
                     try {
@@ -77,9 +86,19 @@ public class JwtTokenFilter extends OncePerRequestFilter {
                     }
                     // --- End Behavioral Detection ---
                     UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
-                            userId, null, Collections.emptyList());
+                            userId, null, authorities);
                     authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                     SecurityContextHolder.getContext().setAuthentication(authentication);
+                    logger.debug("User roles for this request: {}",
+                            SecurityContextHolder.getContext().getAuthentication().getAuthorities());
+                    String role = authorities.stream()
+                            .map(GrantedAuthority::getAuthority)
+                            .filter(auth -> auth.startsWith("ROLE_"))
+                            .findFirst()
+                            .map(auth -> auth.replace("ROLE_", "")) // Remove "ROLE_" prefix
+                            .orElse("USER"); // Default role if not found
+
+                    response.setHeader("X-User-Role", role);
                 }
             } catch (io.jsonwebtoken.ExpiredJwtException ex) {
                 logger.warn("JwtTokenFilter: Access token expired, attempting refresh");
@@ -101,15 +120,26 @@ public class JwtTokenFilter extends OncePerRequestFilter {
                         ResponseEntity<Map> refreshResponse = restTemplate.postForEntity(refreshUrl, entity, Map.class);
                         if (refreshResponse.getStatusCode().is2xxSuccessful() && refreshResponse.getBody() != null) {
                             String newAccessToken = (String) refreshResponse.getBody().get("accessToken");
+                            String newRefreshToken = (String) refreshResponse.getBody().get("refreshToken");
                             if (newAccessToken != null && jwtUtil.validateToken(newAccessToken)) {
                                 String userId = jwtUtil.extractUserId(newAccessToken);
+                                Collection<? extends GrantedAuthority> authorities = jwtUtil.extractAuthorities(newAccessToken);
                                 logger.info("JwtTokenFilter: Refreshed token valid, extracted userId: {}", userId);
                                 UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
-                                        userId, null, Collections.emptyList());
+                                        userId, null, authorities);
                                 authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                                 SecurityContextHolder.getContext().setAuthentication(authentication);
                                 // Optionally, set new access token in response header for frontend
                                 response.setHeader("X-New-Access-Token", newAccessToken);
+                                response.setHeader("X-New-Refresh-Token", newRefreshToken);
+                                String role = authorities.stream()
+                                        .map(GrantedAuthority::getAuthority)
+                                        .filter(auth -> auth.startsWith("ROLE_"))
+                                        .findFirst()
+                                        .map(auth -> auth.replace("ROLE_", "")) // Remove "ROLE_" prefix
+                                        .orElse("USER"); // Default role if not found
+
+                                response.setHeader("X-User-Role", role);
                             }
                         }
                     } catch (Exception refreshEx) {
@@ -125,5 +155,13 @@ public class JwtTokenFilter extends OncePerRequestFilter {
             }
         }
         filterChain.doFilter(request, response);
+        if (SecurityContextHolder.getContext().getAuthentication() != null) {
+            logger.debug("Final Authentication: {}",
+                    SecurityContextHolder.getContext().getAuthentication());
+            logger.debug("Authorities: {}",
+                    SecurityContextHolder.getContext().getAuthentication().getAuthorities());
+        } else {
+            logger.warn("SecurityContext is NULL after JWT filter!");
+        }
     }
 }

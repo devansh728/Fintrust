@@ -2,6 +2,9 @@ package com.fintrust.authentication.service;
 
 import com.fintrust.authentication.model.User;
 import io.jsonwebtoken.Claims;
+import org.springframework.security.core.GrantedAuthority;
+
+import java.util.Collection;
 
 public interface JwtService {
     String generateAccessToken(User user);
@@ -9,4 +12,5 @@ public interface JwtService {
     boolean validateToken(String token);
     Claims extractClaims(String token);
     String extractUserId(String token);
+    Collection<? extends GrantedAuthority> extractAuthorities(String token);
 }

@@ -8,10 +8,12 @@ import com.fintrust.authentication.repository.UserRepository;
 import com.fintrust.authentication.service.AuthService;
 import com.fintrust.authentication.service.JwtService;
 import com.fintrust.authentication.service.UserService;
+import io.jsonwebtoken.Claims;
 import lombok.RequiredArgsConstructor;
 
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -48,97 +50,71 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     public AuthResponse login(LoginRequest request) {
-        Authentication authentication;
         try {
-            authentication = authenticationManager.authenticate(
+            Authentication auth = authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
             );
-        } catch (Exception e) {
-            throw new BadCredentialsException("Invalid email or password");
+            SecurityContextHolder.getContext().setAuthentication(auth);
+
+            User user = userRepository.findByEmail(request.getEmail())
+                    .orElseThrow(() -> new IllegalStateException("User not found after authentication"));
+
+            String accessToken = jwtService.generateAccessToken(user);
+            String refreshToken = jwtService.generateRefreshToken(user);
+            user.setRefreshToken(refreshToken);
+            userRepository.save(user);
+
+            return new AuthResponse(accessToken, refreshToken, user);
+        } catch (AuthenticationException e) {
+            throw new BadCredentialsException("Invalid credentials");
         }
-        SecurityContextHolder.getContext().setAuthentication(authentication);
-        User user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new IllegalArgumentException("User not found"));
-        String accessToken = jwtService.generateAccessToken(user);
-        String refreshToken = jwtService.generateRefreshToken(user);
-        user.setRefreshToken(refreshToken); // Store refresh token in user object
-        userRepository.save(user); // Save user with updated refresh token
-        return new AuthResponse(accessToken, refreshToken, user);
     }
 
     @Override
     public AuthResponse refreshToken(RefreshRequest request) {
-        org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(AuthServiceImpl.class);
-        logger.info("[refreshToken] Incoming refresh token: {}", request.getRefreshToken());
-        if (!StringUtils.hasText(request.getRefreshToken())) {
-            logger.error("[refreshToken] Refresh token is missing");
-            throw new RuntimeException("Refresh token is missing");
+        if (!jwtService.validateToken(request.getRefreshToken())) {
+            throw new SecurityException("Invalid refresh token");
         }
-        boolean valid = false;
-        try {
-            valid = jwtService.validateToken(request.getRefreshToken());
-        } catch (Exception e) {
-            logger.error("[refreshToken] Exception during token validation: {}", e.getMessage(), e);
+
+        String email = jwtService.extractUserId(request.getRefreshToken());
+        User user = userService.findByEmail(email)
+                .orElseThrow(() -> new SecurityException("User not found"));
+
+        if (!request.getRefreshToken().equals(user.getRefreshToken())) {
+            throw new SecurityException("Refresh token mismatch");
         }
-        if (!valid) {
-            logger.error("[refreshToken] Refresh token is invalid or expired");
-            throw new RuntimeException("Refresh token is invalid or expired");
-        }
-        String userId = null;
-        try {
-            userId = jwtService.extractUserId(request.getRefreshToken());
-            logger.info("[refreshToken] Extracted userId/email from token: {}", userId);
-        } catch (Exception e) {
-            logger.error("[refreshToken] Failed to extract userId from token: {}", e.getMessage(), e);
-            throw new RuntimeException("Failed to extract user from token");
-        }
-        Optional<User> userOpt = userService.findByEmail(userId);
-        if (userOpt.isEmpty()) {
-            logger.error("[refreshToken] User not found for email: {}", userId);
-            throw new RuntimeException("User not found");
-        }
-        User user = userOpt.get();
-        logger.info("[refreshToken] User found: {}", user.getEmail());
-        if (user.getRefreshToken() == null) {
-            logger.error("[refreshToken] No refresh token stored for user {}");
-            throw new RuntimeException("No refresh token stored for user");
-        }
-        if (!user.getRefreshToken().equals(request.getRefreshToken())) {
-            logger.error("[refreshToken] Provided refresh token does not match stored token for user {}", user.getEmail());
-            throw new RuntimeException("Refresh token does not match the stored token");
-        }
-        String accessToken = jwtService.generateAccessToken(user);
-        String refreshToken = jwtService.generateRefreshToken(user);
-        user.setRefreshToken(refreshToken);
-        userRepository.save(user); // Save user with updated refresh token
-        logger.info("[refreshToken] Successfully refreshed tokens for user {}", user.getEmail());
-        return new AuthResponse(accessToken, refreshToken, user);
+
+        String newAccessToken = jwtService.generateAccessToken(user);
+        String newRefreshToken = jwtService.generateRefreshToken(user);
+
+        user.setRefreshToken(newRefreshToken);
+        userRepository.save(user);
+
+        return new AuthResponse(newAccessToken, newRefreshToken, user);
     }
 
     @Override
-    public AuthResponse logout(LogoutRequest request) {
-        if (!StringUtils.hasText(request.getRefreshToken()) || !jwtService.validateToken(request.getRefreshToken())) {
-            throw new RuntimeException("Invalid refresh token");
-        }
-        String userId = jwtService.extractUserId(request.getRefreshToken());
-        User user = userService.findByEmail(userId)
-            .orElseGet(() -> userService.findByEmail(userId).orElseThrow(() -> new RuntimeException("User not found")));
-        if (user != null && request.getRefreshToken().equals(user.getRefreshToken())) {
+    public void logout(LogoutRequest request) {
+        if (!jwtService.validateToken(request.getRefreshToken())) return;
+
+        String email = jwtService.extractUserId(request.getRefreshToken());
+        userService.findByEmail(email).ifPresent(user -> {
             user.setRefreshToken(null);
             userRepository.save(user);
-        }
-        return new AuthResponse(null, null, user);
+        });
     }
 
     @Override
-    public Boolean validateToken(String token) {
+    public TokenValidationResult validateToken(String token) {
         if (!StringUtils.hasText(token)) {
-            return false;
+            return new TokenValidationResult(false, "Token is empty");
         }
+
         try {
-            return jwtService.validateToken(token);
+            Claims claims = jwtService.extractClaims(token);
+            return new TokenValidationResult(true, "Valid token", claims);
         } catch (Exception e) {
-            return false; // Token is invalid or expired
+            return new TokenValidationResult(false, "Invalid token: " + e.getMessage());
         }
     }
 }

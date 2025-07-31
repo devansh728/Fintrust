@@ -1,0 +1,1108 @@
+openapi: 3.0.3
+info:
+  title: FinTrust Banking Platform API
+  description: |
+    Comprehensive API documentation for the FinTrust banking platform.
+    
+    ## Services
+    - **Authentication Service** (Port 8080): User authentication, token management
+    - **Consent Service** (Port 8081): Consent management, TPP registration, user profiles
+    
+    ## Authentication
+    Most endpoints require Bearer token authentication. Include the JWT token in the Authorization header:
+    ```
+    Authorization: Bearer <your-access-token>
+    ```
+    
+    ## Base URLs
+    - Authentication: `http://localhost:8080`
+    - Consent: `http://localhost:8081`
+    
+  version: 1.0.0
+  contact:
+    name: FinTrust Development Team
+    email: support@fintrust.com
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: http://localhost:8080
+    description: Authentication Service
+  - url: http://localhost:8081
+    description: Consent Service
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token obtained from login endpoint
+
+  schemas:
+    # Authentication DTOs
+    RegisterRequest:
+      type: object
+      required:
+        - name
+        - email
+        - password
+      properties:
+        name:
+          type: string
+          description: Full name of the user
+          example: "John Doe"
+        email:
+          type: string
+          format: email
+          description: User's email address
+          example: "john@example.com"
+        password:
+          type: string
+          description: User's password (min 8 characters)
+          example: "securePassword123"
+
+    LoginRequest:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+          description: User's email address
+          example: "john@example.com"
+        password:
+          type: string
+          description: User's password
+          example: "securePassword123"
+
+    AuthResponse:
+      type: object
+      properties:
+        accessToken:
+          type: string
+          description: JWT access token (valid for 2.5 hours)
+          example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+        refreshToken:
+          type: string
+          description: JWT refresh token (valid for 7 days)
+          example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+        user:
+          $ref: '#/components/schemas/User'
+
+    RefreshRequest:
+      type: object
+      required:
+        - refreshToken
+      properties:
+        refreshToken:
+          type: string
+          description: Refresh token to get new access token
+          example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+
+    LogoutRequest:
+      type: object
+      required:
+        - refreshToken
+      properties:
+        refreshToken:
+          type: string
+          description: Refresh token to invalidate
+          example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+
+    TokenValidationResult:
+      type: object
+      properties:
+        valid:
+          type: boolean
+          description: Whether the token is valid
+          example: true
+        message:
+          type: string
+          description: Validation message
+          example: "Token is valid"
+        claims:
+          type: object
+          description: JWT claims (if token is valid)
+          example:
+            sub: "john@example.com"
+            iat: 1234567890
+            exp: 1234567890
+
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Unique user ID
+          example: "507f1f77bcf86cd799439011"
+        name:
+          type: string
+          description: User's full name
+          example: "John Doe"
+        email:
+          type: string
+          format: email
+          description: User's email address
+          example: "john@example.com"
+        role:
+          type: string
+          enum: [USER, ADMIN, TPP]
+          description: User's role in the system
+          example: "USER"
+        authProvider:
+          type: string
+          enum: [LOCAL, GOOGLE]
+          description: Authentication provider
+          example: "LOCAL"
+        createdAt:
+          type: string
+          format: date-time
+          description: Account creation timestamp
+          example: "2024-01-01T00:00:00Z"
+
+    # Consent DTOs
+    ConsentDecisionDTO:
+      type: object
+      required:
+        - status
+      properties:
+        userId:
+          type: string
+          description: User ID (auto-filled from token)
+          example: "john@example.com"
+        thirdPartyRequestId:
+          type: string
+          description: Third-party request ID (auto-filled from path)
+          example: "req123"
+        status:
+          type: string
+          enum: [APPROVED, REJECTED]
+          description: User's consent decision
+          example: "APPROVED"
+
+    ThirdPartyRequestDTO:
+      type: object
+      required:
+        - userId
+        - thirdPartyName
+        - purpose
+        - officialEmail
+        - organization
+        - useCase
+        - description
+      properties:
+        userId:
+          type: string
+          description: User ID for the request
+          example: "john@example.com"
+        thirdPartyName:
+          type: string
+          description: Name of the third-party organization
+          example: "FinTech Corp"
+        purpose:
+          type: string
+          description: Purpose of data access
+          example: "Credit Assessment"
+        officialEmail:
+          type: string
+          format: email
+          description: Official contact email
+          example: "contact@fintechcorp.com"
+        organization:
+          type: string
+          description: Organization name
+          example: "FinTech Corporation"
+        useCase:
+          type: string
+          description: Specific use case
+          example: "Loan Application"
+        description:
+          type: string
+          description: Detailed description of the request
+          example: "Access to financial data for loan processing"
+        dynamicFields:
+          type: array
+          items:
+            $ref: '#/components/schemas/DynamicFormFieldDTO'
+          description: Dynamic form fields for data collection
+
+    DynamicFormFieldDTO:
+      type: object
+      required:
+        - fieldName
+        - fieldType
+        - required
+      properties:
+        fieldName:
+          type: string
+          description: Name of the form field
+          example: "accountBalance"
+        fieldType:
+          type: string
+          description: Type of the field
+          example: "number"
+        required:
+          type: boolean
+          description: Whether the field is required
+          example: true
+        description:
+          type: string
+          description: Field description
+          example: "Current account balance"
+
+    TppRegistrationRequest:
+      type: object
+      required:
+        - tppId
+        - name
+        - jurisdiction
+        - kycDocs
+        - requestedScopes
+      properties:
+        tppId:
+          type: string
+          description: Unique TPP identifier
+          example: "TPP001"
+        name:
+          type: string
+          description: TPP organization name
+          example: "FinTech Solutions Ltd"
+        jurisdiction:
+          type: string
+          description: Legal jurisdiction
+          example: "India"
+        kycDocs:
+          type: array
+          items:
+            type: string
+          description: IPFS hashes of KYC documents
+          example: ["ipfs://QmHash1", "ipfs://QmHash2"]
+        requestedScopes:
+          type: array
+          items:
+            type: string
+          description: Requested API scopes
+          example: ["account_info", "transactions"]
+
+    TppApprovalRequest:
+      type: object
+      required:
+        - tppId
+      properties:
+        tppId:
+          type: string
+          description: TPP ID to approve
+          example: "TPP001"
+        adminId:
+          type: string
+          description: Admin ID (auto-filled)
+          example: "admin@123"
+        approved:
+          type: boolean
+          description: Approval status
+          example: true
+        expiryDays:
+          type: integer
+          description: Days until approval expires
+          example: 365
+
+    UserProfileRequestDTO:
+      type: object
+      properties:
+        fullName:
+          type: string
+          description: User's full name
+          example: "John Doe"
+        email:
+          type: string
+          format: email
+          description: User's email
+          example: "john@example.com"
+        phone:
+          type: string
+          description: Phone number
+          example: "+91-9876543210"
+        profilePhoto:
+          type: string
+          description: Profile photo URL or base64
+          example: "data:image/jpeg;base64,..."
+        address:
+          type: string
+          description: Residential address
+          example: "123 Main St, City, State"
+        accountNumber:
+          type: string
+          description: Bank account number
+          example: "1234567890"
+        bank:
+          type: string
+          description: Bank name
+          example: "Canara Bank"
+        birthYear:
+          type: string
+          description: Birth year
+          example: "1990"
+        aadhar:
+          type: string
+          description: Aadhar number
+          example: "123456789012"
+        panCard:
+          type: string
+          description: PAN card number
+          example: "ABCDE1234F"
+        kycStatus:
+          type: string
+          enum: [PENDING, VERIFIED, REJECTED]
+          description: KYC verification status
+          example: "PENDING"
+
+    UserProfileResponseDTO:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Profile ID
+          example: "507f1f77bcf86cd799439011"
+        fullName:
+          type: string
+          description: User's full name
+          example: "John Doe"
+        email:
+          type: string
+          format: email
+          description: User's email
+          example: "john@example.com"
+        phone:
+          type: string
+          description: Phone number
+          example: "+91-9876543210"
+        profilePhoto:
+          type: string
+          description: Profile photo URL
+          example: "https://example.com/photo.jpg"
+        address:
+          type: string
+          description: Residential address
+          example: "123 Main St, City, State"
+        accountNumber:
+          type: string
+          description: Bank account number
+          example: "1234567890"
+        bank:
+          type: string
+          description: Bank name
+          example: "Canara Bank"
+        birthYear:
+          type: string
+          description: Birth year
+          example: "1990"
+        aadhar:
+          type: string
+          description: Aadhar number
+          example: "123456789012"
+        panCard:
+          type: string
+          description: PAN card number
+          example: "ABCDE1234F"
+        kycStatus:
+          type: string
+          enum: [PENDING, VERIFIED, REJECTED]
+          description: KYC verification status
+          example: "PENDING"
+        createdAt:
+          type: string
+          format: date-time
+          description: Profile creation timestamp
+          example: "2024-01-01T00:00:00Z"
+        updatedAt:
+          type: string
+          format: date-time
+          description: Profile last update timestamp
+          example: "2024-01-01T00:00:00Z"
+
+    FormDataSubmissionDTO:
+      type: object
+      required:
+        - submittedFields
+        - privacyLevel
+      properties:
+        formId:
+          type: string
+          description: Form ID (auto-filled from path)
+          example: "form123"
+        thirdPartyRequestId:
+          type: string
+          description: Third-party request ID (auto-filled)
+          example: "req123"
+        userId:
+          type: string
+          description: User ID (auto-filled from token)
+          example: "john@example.com"
+        submittedFields:
+          type: object
+          description: Form field values
+          example:
+            accountBalance: 50000
+            transactionHistory: "last_6_months"
+            creditScore: 750
+        privacyLevel:
+          type: number
+          format: float
+          minimum: 0
+          maximum: 1
+          description: Privacy level (0-1, where 1 is highest privacy)
+          example: 0.8
+
+    ApiResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          description: Operation success status
+          example: true
+        message:
+          type: string
+          description: Response message
+          example: "Operation completed successfully"
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Error type
+          example: "Bad Request"
+        message:
+          type: string
+          description: Error message
+          example: "Invalid input data"
+        timestamp:
+          type: string
+          format: date-time
+          description: Error timestamp
+          example: "2024-01-01T00:00:00Z"
+
+paths:
+  # Authentication Service Endpoints
+  /api/auth/register:
+    post:
+      tags:
+        - Authentication
+      summary: Register a new user
+      description: Create a new user account with email and password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '200':
+          description: User registered successfully
+          content:
+            application/json:
+              schema:
+                type: string
+                example: "User registered successfully"
+        '400':
+          description: Invalid input data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Email already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/auth/login:
+    post:
+      tags:
+        - Authentication
+      summary: User login
+      description: Authenticate user and receive access/refresh tokens
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Authentication successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                type: string
+                example: "Invalid credentials"
+        '500':
+          description: Login failed
+          content:
+            application/json:
+              schema:
+                type: string
+                example: "Login failed: Internal server error"
+
+  /api/auth/refresh-token:
+    post:
+      tags:
+        - Authentication
+      summary: Refresh access token
+      description: Get new access token using refresh token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshRequest'
+      responses:
+        '200':
+          description: New tokens generated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+
+  /api/auth/validate-token:
+    post:
+      tags:
+        - Authentication
+      summary: Validate JWT token
+      description: Validate the provided JWT access token
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: Token validation result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenValidationResult'
+        '400':
+          description: Invalid Authorization header
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenValidationResult'
+
+  /api/auth/logout:
+    post:
+      tags:
+        - Authentication
+      summary: User logout
+      description: Logout user and invalidate refresh token
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LogoutRequest'
+      responses:
+        '200':
+          description: Logout successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+
+  /api/user/me:
+    get:
+      tags:
+        - User Management
+      summary: Get current user
+      description: Get information about the currently authenticated user
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: User information
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # Consent Service Endpoints
+  /consent/respond/{reqId}:
+    post:
+      tags:
+        - Consent Management
+      summary: Respond to consent request
+      description: Approve or reject a third-party consent request
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: reqId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Request ID
+          example: "req123"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConsentDecisionDTO'
+      responses:
+        '200':
+          description: Consent decision recorded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '400':
+          description: Invalid request data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Request not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /consent/user/:
+    get:
+      tags:
+        - Consent Management
+      summary: Get user consents
+      description: Get all consent requests for the authenticated user
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: List of user consents
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                      example: "507f1f77bcf86cd799439011"
+                    thirdPartyName:
+                      type: string
+                      example: "FinTech Corp"
+                    purpose:
+                      type: string
+                      example: "Credit Assessment"
+                    status:
+                      type: string
+                      enum: [PENDING, APPROVED, REJECTED]
+                      example: "PENDING"
+                    createdAt:
+                      type: string
+                      format: date-time
+                      example: "2024-01-01T00:00:00Z"
+                    respondedAt:
+                      type: string
+                      format: date-time
+                      example: "2024-01-01T00:00:00Z"
+
+  /thirdparty/request/{reqId}:
+    post:
+      tags:
+        - Third-Party Requests
+      summary: Create third-party request
+      description: Create a new third-party data access request
+      parameters:
+        - name: reqId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Request ID
+          example: "req123"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ThirdPartyRequestDTO'
+      responses:
+        '200':
+          description: Request created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '400':
+          description: Invalid request data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /thirdparty/all:
+    get:
+      tags:
+        - Third-Party Requests
+      summary: Get all third-party requests
+      description: Get all third-party requests (Admin only)
+      responses:
+        '200':
+          description: List of all requests
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                      example: "507f1f77bcf86cd799439011"
+                    userId:
+                      type: string
+                      example: "john@example.com"
+                    thirdPartyName:
+                      type: string
+                      example: "FinTech Corp"
+                    purpose:
+                      type: string
+                      example: "Credit Assessment"
+                    status:
+                      type: string
+                      enum: [PENDING, APPROVED, REJECTED]
+                      example: "PENDING"
+                    createdAt:
+                      type: string
+                      format: date-time
+                      example: "2024-01-01T00:00:00Z"
+
+  /thirdparty/all/pending:
+    get:
+      tags:
+        - Third-Party Requests
+      summary: Get pending third-party requests
+      description: Get all pending third-party requests (Admin only)
+      responses:
+        '200':
+          description: List of pending requests
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                      example: "507f1f77bcf86cd799439011"
+                    userId:
+                      type: string
+                      example: "john@example.com"
+                    thirdPartyName:
+                      type: string
+                      example: "FinTech Corp"
+                    purpose:
+                      type: string
+                      example: "Credit Assessment"
+                    status:
+                      type: string
+                      example: "PENDING"
+                    createdAt:
+                      type: string
+                      format: date-time
+                      example: "2024-01-01T00:00:00Z"
+
+  /api/tpp/register:
+    post:
+      tags:
+        - TPP Management
+      summary: Register TPP
+      description: Register a new Third-Party Provider (TPP)
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TppRegistrationRequest'
+      responses:
+        '200':
+          description: TPP registered successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '400':
+          description: Invalid request data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/tpp/{tppId}/status:
+    get:
+      tags:
+        - TPP Management
+      summary: Get TPP status
+      description: Get registration status of a TPP
+      parameters:
+        - name: tppId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: TPP ID
+          example: "TPP001"
+      responses:
+        '200':
+          description: TPP status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  tppId:
+                    type: string
+                    example: "TPP001"
+                  name:
+                    type: string
+                    example: "FinTech Solutions Ltd"
+                  status:
+                    type: string
+                    enum: [PENDING, APPROVED, REJECTED]
+                    example: "APPROVED"
+                  approvedAt:
+                    type: string
+                    format: date-time
+                    example: "2024-01-01T00:00:00Z"
+                  expiresAt:
+                    type: string
+                    format: date-time
+                    example: "2025-01-01T00:00:00Z"
+        '404':
+          description: TPP not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/admin/approve-tpp:
+    post:
+      tags:
+        - Admin Management
+      summary: Approve TPP
+      description: Approve a TPP registration (Admin only)
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TppApprovalRequest'
+      responses:
+        '200':
+          description: TPP approved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '400':
+          description: Invalid request data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Insufficient permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/admin/pending-tpps:
+    get:
+      tags:
+        - Admin Management
+      summary: Get pending TPPs
+      description: Get all pending TPP registrations (Admin only)
+      security:
+        - BearerAuth: []
+      responses:
+        '200':
+          description: List of pending TPPs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    tppId:
+                      type: string
+                      example: "TPP001"
+                    name:
+                      type: string
+                      example: "FinTech Solutions Ltd"
+                    jurisdiction:
+                      type: string
+                      example: "India"
+                    requestedScopes:
+                      type: array
+                      items:
+                        type: string
+                      example: ["account_info", "transactions"]
+                    submittedAt:
+                      type: string
+                      format: date-time
+                      example: "2024-01-01T00:00:00Z"
+
+  /user/profile:
+    post:
+      tags:
+        - User Profile
+      summary: Create user profile
+      description: Create a new user profile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserProfileRequestDTO'
+      responses:
+        '200':
+          description: Profile created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfileResponseDTO'
+
+    put:
+      tags:
+        - User Profile
+      summary: Update user profile
+      description: Update an existing user profile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserProfileRequestDTO'
+      responses:
+        '200':
+          description: Profile updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfileResponseDTO'
+
+    get:
+      tags:
+        - User Profile
+      summary: Get user profile
+      description: Get user profile by user ID
+      parameters:
+        - name: userId
+          in: query
+          required: true
+          schema:
+            type: string
+          description: User ID/Email
+          example: "john@example.com"
+      responses:
+        '200':
+          description: User profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfileResponseDTO'
+
+  /form/submit/{formId}:
+    post:
+      tags:
+        - Form Data
+      summary: Submit form data
+      description: Submit form data for a specific form
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: formId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Form ID
+          example: "form123"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FormDataSubmissionDTO'
+      responses:
+        '200':
+          description: Form submitted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiResponse'
+        '400':
+          description: Invalid form data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+tags:
+  - name: Authentication
+    description: User authentication and token management
+  - name: User Management
+    description: User information and profile management
+  - name: Consent Management
+    description: Consent request handling and user consent management
+  - name: Third-Party Requests
+    description: Third-party data access request management
+  - name: TPP Management
+    description: Third-Party Provider registration and management
+  - name: Admin Management
+    description: Administrative functions for TPP approval
+  - name: User Profile
+    description: User profile creation and management
+  - name: Form Data
+    description: Dynamic form data submission 
